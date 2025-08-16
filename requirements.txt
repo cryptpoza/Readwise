@@ -1,6 +1,6 @@
-# requirements.txt
 streamlit
 google-generativeai
 pandas
+supabase
+openai
 requests
-pillow
