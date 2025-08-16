@@ -2,63 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Book Viewer</title>
-    <style> body { margin: 0; background-color: transparent; } canvas { display: block; } </style>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: transparent; }
+        canvas { display: block; }
+    </style>
 </head>
 <body>
     <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.157.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/" } }
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+            }
+        }
     </script>
+
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        const MODEL_PATH = 'static/book.glb';
-        const TEXTURE_PATH = 'portadas/default.png';
-
+        // --- Escena, Cámara y Renderizador ---
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 2.5;
-        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.5, 4);
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
+
+        // --- Luces ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 5, 5);
+        directionalLight.position.set(5, 10, 7.5);
         scene.add(directionalLight);
+
+        // --- Controles ---
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 1.0;
+        controls.enableZoom = false; // Desactivar zoom para una vista más limpia
+
+        // --- Cargar el Modelo 3D (book.glb) y la Textura ---
         const loader = new GLTFLoader();
         const textureLoader = new THREE.TextureLoader();
-        const coverTexture = textureLoader.load(TEXTURE_PATH);
-        coverTexture.flipY = false;
-        coverTexture.colorSpace = THREE.SRGBColorSpace;
-        loader.load(MODEL_PATH, function (gltf) {
-            const book = gltf.scene;
-            book.traverse((node) => {
-                // CAMBIA 'CoverMaterial' SI EL MATERIAL DE TU PORTADA SE LLAMA DIFERENTE
-                if (node.isMesh && (node.material.name === 'CoverMaterial' || node.material.name === 'Book_Cover')) {
-                    node.material.map = coverTexture;
-                    node.material.needsUpdate = true;
-                }
-            });
-            scene.add(book);
-        }, undefined, function (error) { console.error(error); });
+        const coverTexture = textureLoader.load('TEXTURE_PLACEHOLDER');
+        coverTexture.flipY = false; // Esencial para modelos GLB
+
+        const coverMaterial = new THREE.MeshStandardMaterial({ map: coverTexture });
+
+        loader.load(
+            'static/book.glb',
+            function (gltf) {
+                gltf.scene.traverse(function (child) {
+                    // Busca la malla de la portada por su nombre en Blender/otro software
+                    if (child.isMesh && child.name === 'Cover') { 
+                        child.material = coverMaterial;
+                    }
+                });
+                scene.add(gltf.scene);
+            },
+            undefined,
+            function (error) {
+                console.error(error);
+            }
+        );
+
+        // --- Bucle de Animación ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
             renderer.render(scene, camera);
         }
+
         animate();
+
+        // --- Ajuste de tamaño de ventana ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
     </script>
 </body>
 </html>
